@@ -1,0 +1,67 @@
+image: vladyslavusenko/visnav_image:18.04
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  BUILD_TYPE: RelWithDebInfo
+
+# template for docker builds with ccache
+.prepare_docker_template: &prepare_docker_definition
+  tags:
+    - docker
+  before_script:
+    - mkdir -p ccache
+    - export CCACHE_BASEDIR=${PWD}
+    - export CCACHE_DIR=${PWD}/ccache
+    - ccache -s
+  cache:
+    paths:
+    - ccache/
+    key: ${CI_JOB_NAME}
+
+# template for build & unit test
+.compile_and_test_template: &compile_and_test_definition
+  stage: build
+  script:
+    - ./build_submodules.sh ${BUILD_TYPE}
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+    - make -j2
+    # run tests, and if any fail, run again verbose
+    - ctest || (ctest -V && false)
+
+# build on 18.04
+bionic-compile:
+  <<: *prepare_docker_definition
+  <<: *compile_and_test_definition
+
+# build on 16.04
+#xenial-compile:
+#  <<: *prepare_docker_definition
+#  <<: *compile_and_test_definition
+#  image: vladyslavusenko/visnav_image:16.04
+#  only: [master]
+
+# build on macos
+#elcapitan-compile:
+#  <<: *compile_and_test_definition
+#  tags: [macos, "10.11"]
+#  only: [master]
+
+# build on macos
+#mojave-compile:
+#  <<: *compile_and_test_definition
+#  tags: [macos, "10.14"]
+#  only: [master]
+
+# check if clang-format would make any changes
+clang-format:
+  tags:
+    - docker
+  stage: build
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  script:
+    - ./run_format.sh
+    # check if any files are now modified and error if yes
+    - (if [ -n "`git diff --name-only --diff-filter=M --ignore-submodules`" ]; then echo $'\n    Some files are not properly formatted. You can use "./run_format.sh".\n'; git diff --diff-filter=M; false; fi)
