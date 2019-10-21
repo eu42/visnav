@@ -18,13 +18,13 @@ git clone git@gitlab.vision.in.tum.de:visnav_ws19/<username>/visnav.git
 ```
 
 ### Install and configure QtCreator
-Download and install QtCreator
+Download and install **a recent version** QtCreator. We recommend 4.8 or later. The default version shipping with Ubuntu is out of date. You will also need `clang-format`.
 
-On the lab PCs, just do
-```
-sudo apt install qtcreator-4.8
-```
-and then start QtCreator from the terminal with the command `qtcreator-4.8`.
+> **Note:** On the lab PCs, it should be preinstalled. If not, ask your instructors to run
+> ```
+> sudo apt install qtcreator-4.8 clang-format
+> ```
+> and then start QtCreator from the terminal with the command `qtcreator-4.8`.
 
 > **Note:** You can also manually install any version of QtCreator.
 > Best install on the local harddrive in `/work/<username>`:
@@ -33,6 +33,17 @@ and then start QtCreator from the terminal with the command `qtcreator-4.8`.
 > wget https://download.qt.io/official_releases/qtcreator/4.8/4.8.2/qt-creator-opensource-linux-x86_64-4.8.2.run
 > chmod +x qt-creator-opensource-linux-x86_64-4.8.2.run
 > ./qt-creator-opensource-linux-x86_64-4.8.2.run
+> ```
+>
+> ```
+> sudo apt install clang-format
+> ```
+
+> **Note:** On macOS, you can use Homebrew:
+>
+> ```
+> brew cask install qt-creator
+> brew install clang-format
 > ```
 
 After installation, go to `Help` -> `About plugins...` in the menu and enable Beautifier plugin:
@@ -49,6 +60,9 @@ Select file as predefined style in `Clang Format` tab. Also select `None` as the
 
 ### Build project
 First, install the dependencies and build project sub-modules.
+
+> **Note:** On the lab machines, you need to skip the `./install_dependencies.sh` step. Everything should be preinstalled. Else, ask you instructors.
+
 ```
 cd visnav
 ./install_dependencies.sh

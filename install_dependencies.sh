@@ -12,7 +12,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
          clang-format \
          tbb \
          glew \
-         ccache
+         ccache \
+         glog
 
 else
 
