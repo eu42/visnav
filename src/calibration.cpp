@@ -335,11 +335,8 @@ void compute_projections() {
       // 3D coordinates of the aprilgrid corner in the world frame
       Eigen::Vector3d p_3d = aprilgrid.aprilgrid_corner_pos_3d[i];
 
-      // TODO SHEET 2: project point
-      UNUSED(T_w_i);
-      UNUSED(T_i_c);
-      UNUSED(p_3d);
-      Eigen::Vector2d p_2d;
+      Eigen::Vector2d p_2d = calib_cam.intrinsics[kv.first.second]->project(
+          T_i_c.inverse() * T_w_i.inverse() * p_3d);
 
       ccd.corners.push_back(p_2d);
     }
