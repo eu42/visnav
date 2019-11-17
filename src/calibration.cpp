@@ -349,8 +349,53 @@ void optimize() {
   // Build the problem.
   ceres::Problem problem;
 
-  // TODO SHEET 2: setup optimization problem
+  // add parameter blocks
 
+  // use local parametrization for SE(3) poses
+
+  for (int i = 0; i < calib_cam.T_i_c.size(); ++i) {
+    Sophus::SE3d& T_i_c = calib_cam.T_i_c[i];
+    problem.AddParameterBlock(T_i_c.data(), Sophus::SE3d::num_parameters,
+                              new Sophus::test::LocalParameterizationSE3);
+
+    if (i == 0) {
+      // T_i_c for first camera is constant
+      problem.SetParameterBlockConstant(T_i_c.data());
+    }
+  }
+
+  for (int i = 0; i < vec_T_w_i.size(); ++i) {
+    problem.AddParameterBlock(vec_T_w_i[i].data(), Sophus::SE3d::num_parameters,
+                              new Sophus::test::LocalParameterizationSE3);
+  }
+
+  for (int i = 0; i < calib_cam.intrinsics.size(); ++i) {
+    problem.AddParameterBlock(calib_cam.intrinsics[i]->data(), 8);
+  }
+
+  // variables
+  Eigen::Vector3d p_3d;
+  Eigen::Vector2d p_2d;
+  double* intrinsics;
+  const int num_params = Sophus::SE3d::num_parameters;
+
+  for (const auto& kv : calib_corners) {
+    for (int i = 0; i < kv.second.corners.size(); ++i) {
+      p_3d = aprilgrid.aprilgrid_corner_pos_3d[kv.second.corner_ids[i]];
+      p_2d = kv.second.corners[i];
+      intrinsics = calib_cam.intrinsics[kv.first.second]->data();
+      Sophus::SE3d& T_w_i = vec_T_w_i[kv.first.first];
+      Sophus::SE3d& T_i_c = calib_cam.T_i_c[kv.first.second];
+
+      ceres::CostFunction* cost_function =
+          new ceres::AutoDiffCostFunction<ReprojectionCostFunctor, 2,
+                                          num_params, num_params, 8>(
+              new ReprojectionCostFunctor(p_2d, p_3d, cam_model));
+
+      problem.AddResidualBlock(cost_function, NULL, T_w_i.data(), T_i_c.data(),
+                               intrinsics);
+    }
+  }
   ceres::Solver::Options options;
   options.gradient_tolerance = 0.01 * Sophus::Constants<double>::epsilon();
   options.function_tolerance = 0.01 * Sophus::Constants<double>::epsilon();

@@ -99,9 +99,9 @@ class PinholeCamera : public AbstractCamera<Scalar> {
 
     Scalar mx = (u - cx) / fx;
     Scalar my = (v - cy) / fy;
-    Scalar coef = 1 / sqrt(mx * mx + my * my + 1);
+    Scalar coef = Scalar(1) / sqrt(mx * mx + my * my + Scalar(1));
 
-    Vec3 res(mx, my, 1);
+    Vec3 res(mx, my, Scalar(1));
     res *= coef;
 
     return res;
@@ -160,7 +160,7 @@ class ExtendedUnifiedCamera : public AbstractCamera<Scalar> {
     const Scalar& z = p[2];
 
     Scalar d = sqrt(beta * (x * x + y * y) + z * z);
-    Scalar coef = 1 / (alpha * d + (1 - alpha) * z);
+    Scalar coef = Scalar(1) / (alpha * d + (Scalar(1) - alpha) * z);
 
     Vec2 res(coef * fx * x + cx, coef * fy * y + cy);
 
@@ -181,10 +181,12 @@ class ExtendedUnifiedCamera : public AbstractCamera<Scalar> {
     Scalar mx = (u - cx) / fx;
     Scalar my = (v - cy) / fy;
     Scalar r_sq = mx * mx + my * my;
-    Scalar mz = (1 - beta * alpha * alpha * r_sq) /
-                (alpha * sqrt(1 - (2 * alpha - 1) * beta * r_sq) + 1 - alpha);
+    Scalar mz = (Scalar(1) - beta * alpha * alpha * r_sq) /
+                (alpha * sqrt(Scalar(1) -
+                              (Scalar(2) * alpha - Scalar(1)) * beta * r_sq) +
+                 Scalar(1) - alpha);
 
-    Scalar coef = 1 / sqrt(r_sq + mz * mz);
+    Scalar coef = Scalar(1) / sqrt(r_sq + mz * mz);
 
     Vec3 res(mx, my, mz);
     res *= coef;
@@ -243,7 +245,8 @@ class DoubleSphereCamera : public AbstractCamera<Scalar> {
     Scalar d1 = sqrt(x * x + y * y + z * z);
     Scalar d2 = sqrt(x * x + y * y + (xi * d1 + z) * (xi * d1 + z));
 
-    Scalar coef = 1 / (alpha * d2 + (1 - alpha) * (xi * d1 + z));
+    Scalar coef =
+        Scalar(1) / (alpha * d2 + (Scalar(1) - alpha) * (xi * d1 + z));
 
     Vec2 res(fx * x * coef + cx, fy * y * coef + cy);
 
@@ -264,12 +267,14 @@ class DoubleSphereCamera : public AbstractCamera<Scalar> {
     Scalar mx = (u - cx) / fx;
     Scalar my = (v - cy) / fy;
     Scalar r_sq = mx * mx + my * my;
-    Scalar mz = (1 - alpha * alpha * r_sq) /
-                (alpha * sqrt(1 - (2 * alpha - 1) * r_sq) + 1 - alpha);
+    Scalar mz =
+        (Scalar(1) - alpha * alpha * r_sq) /
+        (alpha * sqrt(Scalar(1) - (Scalar(2) * alpha - Scalar(1)) * r_sq) +
+         Scalar(1) - alpha);
 
     Scalar mz_sq = mz * mz;
     Scalar coef =
-        (mz * xi + sqrt(mz_sq + (1 - xi * xi) * r_sq)) / (mz_sq + r_sq);
+        (mz * xi + sqrt(mz_sq + (Scalar(1) - xi * xi) * r_sq)) / (mz_sq + r_sq);
 
     Vec3 res(coef * mx, coef * my, coef * mz - xi);
 
@@ -340,7 +345,7 @@ class KannalaBrandt4Camera : public AbstractCamera<Scalar> {
     Scalar d = theta + k1 * t_3 + k2 * t_5 + k3 * t_7 + k4 * t_9;
 
     // degenerate case
-    if (r == 0) r = 1;
+    if (r == Scalar(0)) r = Scalar(1);
 
     Vec2 res(fx * d * x / r + cx, fy * d * y / r + cy);
 
@@ -367,7 +372,7 @@ class KannalaBrandt4Camera : public AbstractCamera<Scalar> {
     // compute theta from d using Newton's Method
 
     // initialize
-    Scalar theta = M_PI_2;
+    Scalar theta = Scalar(M_PI_2);
 
     for (int i = 0; i < 5; ++i) {
       Scalar t_2 = theta * theta;
@@ -382,14 +387,14 @@ class KannalaBrandt4Camera : public AbstractCamera<Scalar> {
       Scalar d = theta + k1 * t_3 + k2 * t_5 + k3 * t_7 + k4 * t_9;
 
       // derivate of d(theta)
-      Scalar d_der =
-          1 + 3 * k1 * t_2 + 5 * k2 * t_4 + 7 * k3 * t_6 + 9 * k4 * t_8;
+      Scalar d_der = Scalar(1) + Scalar(3) * k1 * t_2 + Scalar(5) * k2 * t_4 +
+                     Scalar(7) * k3 * t_6 + Scalar(9) * k4 * t_8;
 
       theta -= (d - ru) / d_der;
     }
 
     // degenerate case
-    if (ru == 0) ru = 1;
+    if (ru == Scalar(0)) ru = Scalar(1);
 
     Scalar sin_t = sin(theta);
     Scalar cos_t = cos(theta);
