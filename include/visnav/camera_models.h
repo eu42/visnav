@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include <cmath>
 #include <memory>
 
 #include <Eigen/Dense>
@@ -83,17 +84,7 @@ class PinholeCamera : public AbstractCamera<Scalar> {
     const Scalar& y = p[1];
     const Scalar& z = p[2];
 
-    Vec2 res;
-
-    // TODO SHEET 2: implement camera model
-    UNUSED(fx);
-    UNUSED(fy);
-    UNUSED(cx);
-    UNUSED(cy);
-    UNUSED(x);
-    UNUSED(y);
-    UNUSED(z);
-
+    Vec2 res(fx * x / z + cx, fy * y / z + cy);
     return res;
   }
 
@@ -103,14 +94,15 @@ class PinholeCamera : public AbstractCamera<Scalar> {
     const Scalar& cx = param[2];
     const Scalar& cy = param[3];
 
-    Vec3 res;
+    const Scalar& u = p[0];
+    const Scalar& v = p[1];
 
-    // TODO SHEET 2: implement camera model
-    UNUSED(p);
-    UNUSED(fx);
-    UNUSED(fy);
-    UNUSED(cx);
-    UNUSED(cy);
+    Scalar mx = (u - cx) / fx;
+    Scalar my = (v - cy) / fy;
+    Scalar coef = Scalar(1) / sqrt(mx * mx + my * my + Scalar(1));
+
+    Vec3 res(mx, my, Scalar(1));
+    res *= coef;
 
     return res;
   }
@@ -167,18 +159,10 @@ class ExtendedUnifiedCamera : public AbstractCamera<Scalar> {
     const Scalar& y = p[1];
     const Scalar& z = p[2];
 
-    Vec2 res;
+    Scalar d = sqrt(beta * (x * x + y * y) + z * z);
+    Scalar coef = Scalar(1) / (alpha * d + (Scalar(1) - alpha) * z);
 
-    // TODO SHEET 2: implement camera model
-    UNUSED(fx);
-    UNUSED(fy);
-    UNUSED(cx);
-    UNUSED(cy);
-    UNUSED(alpha);
-    UNUSED(beta);
-    UNUSED(x);
-    UNUSED(y);
-    UNUSED(z);
+    Vec2 res(coef * fx * x + cx, coef * fy * y + cy);
 
     return res;
   }
@@ -191,16 +175,21 @@ class ExtendedUnifiedCamera : public AbstractCamera<Scalar> {
     const Scalar& alpha = param[4];
     const Scalar& beta = param[5];
 
-    Vec3 res;
+    const Scalar& u = p[0];
+    const Scalar& v = p[1];
 
-    // TODO SHEET 2: implement camera model
-    UNUSED(p);
-    UNUSED(fx);
-    UNUSED(fy);
-    UNUSED(cx);
-    UNUSED(cy);
-    UNUSED(alpha);
-    UNUSED(beta);
+    Scalar mx = (u - cx) / fx;
+    Scalar my = (v - cy) / fy;
+    Scalar r_sq = mx * mx + my * my;
+    Scalar mz = (Scalar(1) - beta * alpha * alpha * r_sq) /
+                (alpha * sqrt(Scalar(1) -
+                              (Scalar(2) * alpha - Scalar(1)) * beta * r_sq) +
+                 Scalar(1) - alpha);
+
+    Scalar coef = Scalar(1) / sqrt(r_sq + mz * mz);
+
+    Vec3 res(mx, my, mz);
+    res *= coef;
 
     return res;
   }
@@ -253,18 +242,13 @@ class DoubleSphereCamera : public AbstractCamera<Scalar> {
     const Scalar& y = p[1];
     const Scalar& z = p[2];
 
-    Vec2 res;
+    Scalar d1 = sqrt(x * x + y * y + z * z);
+    Scalar d2 = sqrt(x * x + y * y + (xi * d1 + z) * (xi * d1 + z));
 
-    // TODO SHEET 2: implement camera model
-    UNUSED(fx);
-    UNUSED(fy);
-    UNUSED(cx);
-    UNUSED(cy);
-    UNUSED(xi);
-    UNUSED(alpha);
-    UNUSED(x);
-    UNUSED(y);
-    UNUSED(z);
+    Scalar coef =
+        Scalar(1) / (alpha * d2 + (Scalar(1) - alpha) * (xi * d1 + z));
+
+    Vec2 res(fx * x * coef + cx, fy * y * coef + cy);
 
     return res;
   }
@@ -277,16 +261,22 @@ class DoubleSphereCamera : public AbstractCamera<Scalar> {
     const Scalar& xi = param[4];
     const Scalar& alpha = param[5];
 
-    Vec3 res;
+    const Scalar& u = p[0];
+    const Scalar& v = p[1];
 
-    // TODO SHEET 2: implement camera model
-    UNUSED(p);
-    UNUSED(fx);
-    UNUSED(fy);
-    UNUSED(cx);
-    UNUSED(cy);
-    UNUSED(xi);
-    UNUSED(alpha);
+    Scalar mx = (u - cx) / fx;
+    Scalar my = (v - cy) / fy;
+    Scalar r_sq = mx * mx + my * my;
+    Scalar mz =
+        (Scalar(1) - alpha * alpha * r_sq) /
+        (alpha * sqrt(Scalar(1) - (Scalar(2) * alpha - Scalar(1)) * r_sq) +
+         Scalar(1) - alpha);
+
+    Scalar mz_sq = mz * mz;
+    Scalar coef =
+        (mz * xi + sqrt(mz_sq + (Scalar(1) - xi * xi) * r_sq)) / (mz_sq + r_sq);
+
+    Vec3 res(coef * mx, coef * my, coef * mz - xi);
 
     return res;
   }
@@ -343,20 +333,21 @@ class KannalaBrandt4Camera : public AbstractCamera<Scalar> {
     const Scalar& y = p[1];
     const Scalar& z = p[2];
 
-    Vec2 res;
+    Scalar r = sqrt(x * x + y * y);
+    Scalar theta = atan2(r, z);
 
-    // TODO SHEET 2: implement camera model
-    UNUSED(fx);
-    UNUSED(fy);
-    UNUSED(cx);
-    UNUSED(cy);
-    UNUSED(k1);
-    UNUSED(k2);
-    UNUSED(k3);
-    UNUSED(k4);
-    UNUSED(x);
-    UNUSED(y);
-    UNUSED(z);
+    Scalar t_2 = theta * theta;
+    Scalar t_3 = theta * t_2;
+    Scalar t_5 = t_3 * t_2;
+    Scalar t_7 = t_5 * t_2;
+    Scalar t_9 = t_7 * t_2;
+
+    Scalar d = theta + k1 * t_3 + k2 * t_5 + k3 * t_7 + k4 * t_9;
+
+    // degenerate case
+    if (r == Scalar(0)) r = Scalar(1);
+
+    Vec2 res(fx * d * x / r + cx, fy * d * y / r + cy);
 
     return res;
   }
@@ -366,15 +357,49 @@ class KannalaBrandt4Camera : public AbstractCamera<Scalar> {
     const Scalar& fy = param[1];
     const Scalar& cx = param[2];
     const Scalar& cy = param[3];
+    const Scalar& k1 = param[4];
+    const Scalar& k2 = param[5];
+    const Scalar& k3 = param[6];
+    const Scalar& k4 = param[7];
 
-    Vec3 res;
+    const Scalar& u = p[0];
+    const Scalar& v = p[1];
 
-    // TODO SHEET 2: implement camera model
-    UNUSED(p);
-    UNUSED(fx);
-    UNUSED(fy);
-    UNUSED(cx);
-    UNUSED(cy);
+    Scalar mx = (u - cx) / fx;
+    Scalar my = (v - cy) / fy;
+    Scalar ru = sqrt(mx * mx + my * my);
+
+    // compute theta from d using Newton's Method
+
+    // initialize
+    Scalar theta = Scalar(M_PI_2);
+
+    for (int i = 0; i < 5; ++i) {
+      Scalar t_2 = theta * theta;
+      Scalar t_3 = theta * t_2;
+      Scalar t_4 = t_2 * t_2;
+      Scalar t_5 = t_3 * t_2;
+      Scalar t_6 = t_4 * t_2;
+      Scalar t_7 = t_5 * t_2;
+      Scalar t_8 = t_6 * t_2;
+      Scalar t_9 = t_7 * t_2;
+
+      Scalar d = theta + k1 * t_3 + k2 * t_5 + k3 * t_7 + k4 * t_9;
+
+      // derivate of d(theta)
+      Scalar d_der = Scalar(1) + Scalar(3) * k1 * t_2 + Scalar(5) * k2 * t_4 +
+                     Scalar(7) * k3 * t_6 + Scalar(9) * k4 * t_8;
+
+      theta -= (d - ru) / d_der;
+    }
+
+    // degenerate case
+    if (ru == Scalar(0)) ru = Scalar(1);
+
+    Scalar sin_t = sin(theta);
+    Scalar cos_t = cos(theta);
+
+    Vec3 res(sin_t * mx / ru, sin_t * my / ru, cos_t);
 
     return res;
   }
