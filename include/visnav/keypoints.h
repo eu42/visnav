@@ -212,7 +212,7 @@ void computeDescriptors(const pangolin::ManagedImage<uint8_t>& img_raw,
     const double _sin = sin(angle);
     const double _cos = cos(angle);
 
-    for (int i = 0; i < descriptor.size(); ++i) {
+    for (size_t i = 0; i < descriptor.size(); ++i) {
       auto [x_a, y_a] =
           _rotate_point(pattern_31_x_a[i], pattern_31_y_a[i], _sin, _cos);
       auto [x_b, y_b] =
@@ -241,13 +241,13 @@ std::map<int, int> _match(const std::vector<std::bitset<256>>& descs_1,
                           int threshold, double dist_2_best) {
   std::map<int, int> matches;
 
-  for (int i = 0; i < descs_1.size(); ++i) {
+  for (size_t i = 0; i < descs_1.size(); ++i) {
     // max possible value is the descriptor length, i.e. 256
     int min_dist = 257;
     int second_dist = 257;
     int best_match = -1;
 
-    for (int j = 0; j < descs_2.size(); ++j) {
+    for (size_t j = 0; j < descs_2.size(); ++j) {
       // hamming distance
       int dist = (descs_1[i] ^ descs_2[j]).count();
 
