@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <bitset>
+#include <cmath>
 #include <set>
 
 #include <Eigen/Dense>
@@ -48,6 +49,7 @@ namespace visnav {
 
 const int PATCH_SIZE = 31;
 const int HALF_PATCH_SIZE = 15;
+const int HALF_PATCH_SIZE_SQ = HALF_PATCH_SIZE * HALF_PATCH_SIZE;
 const int EDGE_THRESHOLD = 19;
 
 typedef std::bitset<256> Descriptor;
@@ -152,6 +154,8 @@ void computeAngles(const pangolin::ManagedImage<uint8_t>& img_raw,
                    KeypointsData& kd, bool rotate_features) {
   kd.corner_angles.resize(kd.corners.size());
 
+  double m_01, m_10;
+
   for (size_t i = 0; i < kd.corners.size(); i++) {
     const Eigen::Vector2d& p = kd.corners[i];
 
@@ -161,14 +165,34 @@ void computeAngles(const pangolin::ManagedImage<uint8_t>& img_raw,
     double angle = 0;
 
     if (rotate_features) {
-      // TODO SHEET 3: compute angle
-      UNUSED(img_raw);
-      UNUSED(cx);
-      UNUSED(cy);
+      m_01 = 0;
+      m_10 = 0;
+
+      // loop through all possible x, y values such that
+      //  x^2 + y^2 <= HALF_PATCH_SIZE^2
+      for (int x = -HALF_PATCH_SIZE; x <= HALF_PATCH_SIZE; ++x) {
+        for (int y = -HALF_PATCH_SIZE; y <= HALF_PATCH_SIZE; ++y) {
+          // check it here without using sqrt
+          if (x * x + y * y > HALF_PATCH_SIZE_SQ) continue;
+
+          int intensity = img_raw(cx + x, cy + y);
+
+          m_01 += y * intensity;
+          m_10 += x * intensity;
+        }
+      }
+
+      angle = atan2(m_01, m_10);
     }
 
     kd.corner_angles[i] = angle;
   }
+}
+
+std::tuple<int, int> _rotate_point(int x, int y, double _sin, double _cos) {
+  int u = round(_cos * x - _sin * y);
+  int v = round(_sin * x + _cos * y);
+  return {u, v};
 }
 
 void computeDescriptors(const pangolin::ManagedImage<uint8_t>& img_raw,
@@ -179,16 +203,26 @@ void computeDescriptors(const pangolin::ManagedImage<uint8_t>& img_raw,
     std::bitset<256> descriptor;
 
     const Eigen::Vector2d& p = kd.corners[i];
-    double angle = kd.corner_angles[i];
+    const double angle = kd.corner_angles[i];
 
-    int cx = p[0];
-    int cy = p[1];
+    const int cx = p[0];
+    const int cy = p[1];
 
-    // TODO SHEET 3: compute descriptor
-    UNUSED(img_raw);
-    UNUSED(angle);
-    UNUSED(cx);
-    UNUSED(cy);
+    // precompute values
+    const double _sin = sin(angle);
+    const double _cos = cos(angle);
+
+    for (int i = 0; i < descriptor.size(); ++i) {
+      auto [x_a, y_a] =
+          _rotate_point(pattern_31_x_a[i], pattern_31_y_a[i], _sin, _cos);
+      auto [x_b, y_b] =
+          _rotate_point(pattern_31_x_b[i], pattern_31_y_b[i], _sin, _cos);
+
+      if (img_raw(cx + x_a, cy + y_a) < img_raw(cx + x_b, cy + y_b)) {
+        // zero initialized. only update bits to set to 1
+        descriptor[i] = 1;
+      }
+    }
 
     kd.corner_descriptors[i] = descriptor;
   }
@@ -202,18 +236,52 @@ void detectKeypointsAndDescriptors(
   computeDescriptors(img_raw, kd);
 }
 
-void matchDescriptors(const std::vector<std::bitset<256>>& corner_descriptors_1,
-                      const std::vector<std::bitset<256>>& corner_descriptors_2,
+std::map<int, int> _match(const std::vector<std::bitset<256>>& descs_1,
+                          const std::vector<std::bitset<256>>& descs_2,
+                          int threshold, double dist_2_best) {
+  std::map<int, int> matches;
+
+  for (int i = 0; i < descs_1.size(); ++i) {
+    // max possible value is the descriptor length, i.e. 256
+    int min_dist = 257;
+    int second_dist = 257;
+    int best_match = -1;
+
+    for (int j = 0; j < descs_2.size(); ++j) {
+      // hamming distance
+      int dist = (descs_1[i] ^ descs_2[j]).count();
+
+      if (dist < min_dist) {
+        second_dist = min_dist;
+        min_dist = dist;
+        best_match = j;
+      } else if (dist < second_dist) {
+        second_dist = dist;
+      }
+    }
+
+    if (min_dist < threshold && min_dist * dist_2_best <= second_dist) {
+      matches.emplace(i, best_match);
+    }
+  }
+  return matches;
+}
+
+void matchDescriptors(const std::vector<std::bitset<256>>& descs_1,
+                      const std::vector<std::bitset<256>>& descs_2,
                       std::vector<std::pair<int, int>>& matches, int threshold,
                       double dist_2_best) {
   matches.clear();
 
-  // TODO SHEET 3: match features
-  UNUSED(corner_descriptors_1);
-  UNUSED(corner_descriptors_2);
-  UNUSED(matches);
-  UNUSED(threshold);
-  UNUSED(dist_2_best);
+  auto match_1_to_2 = _match(descs_1, descs_2, threshold, dist_2_best);
+  auto match_2_to_1 = _match(descs_2, descs_1, threshold, dist_2_best);
+
+  // only match if matches agree for both descriptors
+  for (auto match : match_1_to_2) {
+    if (match.first == match_2_to_1[match.second]) {
+      matches.push_back(match);
+    }
+  }
 }
 
 }  // namespace visnav
