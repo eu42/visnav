@@ -28,7 +28,7 @@ add_executable(test_ex4 src/test_ex4.cpp)
 target_link_libraries(test_ex4 gtest gtest_main ceres opengv ${TBB_LIBRARIES})
 
 add_executable(test_ex5 src/test_ex5.cpp)
-target_link_libraries(test_ex5 gtest gtest_main ceres opengv ${TBB_LIBRARIES})
+target_link_libraries(test_ex5 gtest gtest_main ceres opengv ${TBB_LIBRARIES}  ${OpenCV_LIBS})
 
 
 
@@ -38,4 +38,4 @@ gtest_discover_tests(test_ex2 DISCOVERY_TIMEOUT 60)
 add_test(NAME ex2_calibration_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test_ex2.sh WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 gtest_discover_tests(test_ex3 DISCOVERY_TIMEOUT 60)
 gtest_discover_tests(test_ex4 DISCOVERY_TIMEOUT 60)
-#gtest_discover_tests(test_ex5 DISCOVERY_TIMEOUT 60)
+gtest_discover_tests(test_ex5 DISCOVERY_TIMEOUT 60)
