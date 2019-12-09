@@ -53,6 +53,9 @@ const int HALF_PATCH_SIZE_SQ = HALF_PATCH_SIZE * HALF_PATCH_SIZE;
 const int EDGE_THRESHOLD = 19;
 
 typedef std::bitset<256> Descriptor;
+// a distance value which cannot be attained with 256 bit descriptors
+// max possible value is the descriptor length, i.e. 256
+int MAX_DISTANCE = 257;
 
 char pattern_31_x_a[256] = {
     8,   4,   -11, 7,   2,   1,   -2,  -13, -13, 10,  -13, -11, 7,   -4,  -13,
@@ -200,7 +203,7 @@ void computeDescriptors(const pangolin::ManagedImage<uint8_t>& img_raw,
   kd.corner_descriptors.resize(kd.corners.size());
 
   for (size_t i = 0; i < kd.corners.size(); i++) {
-    std::bitset<256> descriptor;
+    Descriptor descriptor;
 
     const Eigen::Vector2d& p = kd.corners[i];
     const double angle = kd.corner_angles[i];
@@ -236,25 +239,27 @@ void detectKeypointsAndDescriptors(
   computeDescriptors(img_raw, kd);
 }
 
-std::map<int, int> _match(const std::vector<std::bitset<256>>& descs_1,
-                          const std::vector<std::bitset<256>>& descs_2,
-                          int threshold, double dist_2_best) {
+int hamming_distance(Descriptor desc1, Descriptor desc2) {
+  return int((desc1 ^ desc2).count());
+}
+
+std::map<int, int> _match(const std::vector<Descriptor>& descs_1,
+                          const std::vector<Descriptor>& descs_2, int threshold,
+                          double dist_2_best) {
   std::map<int, int> matches;
 
   for (size_t i = 0; i < descs_1.size(); ++i) {
-    // max possible value is the descriptor length, i.e. 256
-    int min_dist = 257;
-    int second_dist = 257;
+    int min_dist = MAX_DISTANCE;
+    int second_dist = MAX_DISTANCE;
     int best_match = -1;
 
     for (size_t j = 0; j < descs_2.size(); ++j) {
-      // hamming distance
-      int dist = (descs_1[i] ^ descs_2[j]).count();
+      int dist = hamming_distance(descs_1[i], descs_2[j]);
 
       if (dist < min_dist) {
         second_dist = min_dist;
         min_dist = dist;
-        best_match = j;
+        best_match = int(j);
       } else if (dist < second_dist) {
         second_dist = dist;
       }
@@ -267,8 +272,8 @@ std::map<int, int> _match(const std::vector<std::bitset<256>>& descs_1,
   return matches;
 }
 
-void matchDescriptors(const std::vector<std::bitset<256>>& descs_1,
-                      const std::vector<std::bitset<256>>& descs_2,
+void matchDescriptors(const std::vector<Descriptor>& descs_1,
+                      const std::vector<Descriptor>& descs_2,
                       std::vector<std::pair<int, int>>& matches, int threshold,
                       double dist_2_best) {
   matches.clear();
