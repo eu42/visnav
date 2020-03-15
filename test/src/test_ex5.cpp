@@ -413,7 +413,7 @@ TEST(Ex5TestSuite, RemoveOldKFs) {
   Matches feature_matches;
   FeatureTracks feature_tracks;
   FeatureTracks outlier_tracks;
-  Cameras cameras;
+  Cameras cameras, old_cameras;
   Landmarks landmarks;
 
   load_calib(calib_path, calib_cam);
@@ -434,8 +434,8 @@ TEST(Ex5TestSuite, RemoveOldKFs) {
   // std::cerr << "kf_frames.size() " << kf_frames.size() << std::endl;
 
   int max_num_kfs = 2;
-  remove_old_keyframes(tcid, max_num_kfs, cameras, landmarks, old_landmarks,
-                       kf_frames);
+  remove_old_keyframes(tcid, max_num_kfs, cameras, old_cameras, landmarks,
+                       old_landmarks, kf_frames);
 
   // Check that we have right number of kfs.
   EXPECT_EQ(max_num_kfs, int(kf_frames.size()));
