@@ -48,6 +48,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace visnav {
 
+// Image dimensions are 752*480 for the test data
+// these are not inclusive for boundary checks
+const double h_image = 480;
+const double w_image = 752;
+
 /// identifies a frame of multiple images (stereo pair)
 using FrameId = int64_t;
 
@@ -75,6 +80,8 @@ struct KeypointsData {
   /// collection of feature descriptors with same index as `corners` (indexed by
   /// FeatureId)
   std::vector<std::bitset<256>> corner_descriptors;
+
+  std::map<int, int> transform_corner_map;
 };
 
 /// feature corners is a collection of { imageId => KeypointsData }
@@ -89,6 +96,8 @@ struct MatchData {
   std::vector<std::pair<FeatureId, FeatureId>> matches;
   /// collection of {featureId_i, featureId_j} pairs of inlier matches
   std::vector<std::pair<FeatureId, FeatureId>> inliers;
+
+  std::map<int, int> corner0_transform_map, corner1_transform_map;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

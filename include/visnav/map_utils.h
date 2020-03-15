@@ -327,7 +327,7 @@ void bundle_adjustment(const Corners& feature_corners,
                        const BundleAdjustmentOptions& options,
                        const std::set<TimeCamId>& fixed_cameras,
                        Calibration& calib_cam, Cameras& cameras,
-                       Landmarks& landmarks) {
+                       Landmarks& landmarks, bool use_optical_flow) {
   ceres::Problem problem;
 
   // Setup optimization problem
@@ -357,12 +357,16 @@ void bundle_adjustment(const Corners& feature_corners,
   for (auto& l : landmarks) {
     problem.AddParameterBlock(l.second.p.data(), 3);
 
-    for (auto f_t : l.second.obs) {
-      const Eigen::Vector2d& p =
-          feature_corners.at(f_t.first).corners[f_t.second];
+    for (const auto& [tcid, f_i] : l.second.obs) {
+      Eigen::Vector2d p;
+      if (use_optical_flow) {
+        int corner_id = feature_corners.at(tcid).transform_corner_map.at(f_i);
+        p = feature_corners.at(tcid).corners[corner_id];
+      } else {
+        p = feature_corners.at(tcid).corners[f_i];
+      }
 
-      const std::string& cam_model =
-          calib_cam.intrinsics[f_t.first.second]->name();
+      const std::string& cam_model = calib_cam.intrinsics[tcid.second]->name();
       BundleAdjustmentReprojectionCostFunctor* functor =
           new BundleAdjustmentReprojectionCostFunctor(p, cam_model);
 
@@ -374,9 +378,9 @@ void bundle_adjustment(const Corners& feature_corners,
           options.use_huber ? new ceres::HuberLoss(options.huber_parameter)
                             : NULL;
 
-      problem.AddResidualBlock(
-          cost_function, lost_function, cameras[f_t.first].T_w_c.data(),
-          l.second.p.data(), calib_cam.intrinsics[f_t.first.second]->data());
+      problem.AddResidualBlock(cost_function, lost_function,
+                               cameras[tcid].T_w_c.data(), l.second.p.data(),
+                               calib_cam.intrinsics[tcid.second]->data());
     }
   }
 
