@@ -47,11 +47,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace visnav {
 
-// Image dimensions are 752*480 for the test data
-// these are not inclusive for boundary checks
-const double h_image = 480;
-const double w_image = 752;
-
 void project_landmarks(
     const Sophus::SE3d& current_pose,
     const std::shared_ptr<AbstractCamera<double>>& cam,
@@ -239,12 +234,12 @@ void add_new_landmarks(const TimeCamId tcidl, const TimeCamId tcidr,
     landmark.obs.emplace(tcidl, f_id);
 
     // if the left point is in md_stereo.inliers then add both observations
-    for (const auto& [f_id0, f_id1] : md_stereo.inliers) {
-      if (f_id0 == f_id) {
-        landmark.obs.emplace(tcidr, f_id1);
+    for (const auto& [f_idl, f_idr] : md_stereo.inliers) {
+      if (f_idl == f_id) {
+        landmark.obs.emplace(tcidr, f_idr);
 
         // track stereo observations that are added to existing landmarks
-        added_inliers.emplace(f_id0, f_id1);
+        added_inliers.emplace(f_idl, f_idr);
 
         break;
       }
@@ -259,10 +254,11 @@ void add_new_landmarks(const TimeCamId tcidl, const TimeCamId tcidr,
   for (const auto& i : md_stereo.inliers) {
     // inlier is not added to landmarks
     if (added_inliers.find(i) == added_inliers.end()) {
+      auto& [f_idl, f_idr] = i;
       bearing_vec_0.push_back(
-          calib_cam.intrinsics[tcidl.second]->unproject(kdl.corners[i.first]));
+          calib_cam.intrinsics[tcidl.second]->unproject(kdl.corners[f_idl]));
       bearing_vec_1.push_back(
-          calib_cam.intrinsics[tcidr.second]->unproject(kdr.corners[i.second]));
+          calib_cam.intrinsics[tcidr.second]->unproject(kdr.corners[f_idr]));
     }
   }
 
@@ -280,8 +276,9 @@ void add_new_landmarks(const TimeCamId tcidl, const TimeCamId tcidr,
       l.p = T_w_c0 * opengv::triangulation::triangulate(adapter, j++);
 
       // add observations to the new landmark
-      l.obs.emplace(tcidl, i.first);
-      l.obs.emplace(tcidr, i.second);
+      auto& [f_idl, f_idr] = i;
+      l.obs.emplace(tcidl, f_idl);
+      l.obs.emplace(tcidr, f_idr);
 
       // add new landmark to `landmarks`
 
@@ -294,8 +291,8 @@ void add_new_landmarks(const TimeCamId tcidl, const TimeCamId tcidr,
 }
 
 void remove_old_keyframes(const TimeCamId tcidl, const int max_num_kfs,
-                          Cameras& cameras, Landmarks& landmarks,
-                          Landmarks& old_landmarks,
+                          Cameras& cameras, Cameras& old_cameras,
+                          Landmarks& landmarks, Landmarks& old_landmarks,
                           std::set<FrameId>& kf_frames) {
   kf_frames.emplace(tcidl.first);
 
@@ -314,6 +311,9 @@ void remove_old_keyframes(const TimeCamId tcidl, const int max_num_kfs,
     // Removed keyframes should be removed from cameras
     TimeCamId tcid0(frame_id, 0);
     TimeCamId tcid1(frame_id, 1);
+    // keep removed cameras in a separate variable for later use
+    // only keep left camera
+    old_cameras[tcid0] = cameras.at(tcid0);
     cameras.erase(tcid0);
     cameras.erase(tcid1);
 

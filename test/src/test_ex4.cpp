@@ -232,7 +232,7 @@ TEST(Ex4TestSuite, BundleAdjustment) {
   std::set<TimeCamId> fixed_cameras = {{0, 0}, {0, 1}};
 
   bundle_adjustment(feature_corners, ba_options, fixed_cameras, calib_cam,
-                    cameras, landmarks);
+                    cameras, landmarks, false);
 
   test_cameras_equal(cameras_ref, cameras);
   test_landmarks_equal(landmarks_ref, landmarks);

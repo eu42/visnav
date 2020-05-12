@@ -1769,7 +1769,7 @@ void optimize() {
   ba_options.max_num_iterations = 20;
   ba_options.verbosity_level = ba_verbose;
   bundle_adjustment(feature_corners, ba_options, fixed_cameras, calib_cam,
-                    cameras, landmarks);
+                    cameras, landmarks, false);
 
   // Update project info cache
   compute_projections();

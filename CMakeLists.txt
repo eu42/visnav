@@ -86,7 +86,7 @@ message(STATUS "Found TBB headers in: ${TBB_INCLUDE_DIR}")
 
 
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV REQUIRED COMPONENTS core features2d)
+find_package(OpenCV REQUIRED COMPONENTS core features2d video highgui)
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
 add_library(OpenCV INTERFACE IMPORTED)
 set_property(TARGET OpenCV PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OpenCV_INCLUDE_DIRS})
